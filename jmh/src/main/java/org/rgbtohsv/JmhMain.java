@@ -49,7 +49,7 @@ public class JmhMain {
         argb_fill(argb, size);
     }
 
-    //@Benchmark
+    @Benchmark
     public float[] vector() {
         //var size = 16384;
         //float[] argb = new float[4 * size];
@@ -68,7 +68,7 @@ public class JmhMain {
         //System.arraycopy(argb, 16, argb2, 0, 16);
         //float[] argb3 = new float[] {1.0f, 0.0f, 0.0f, 0.08f, 1.0f, 0.0f, 0.0f, 0.099999994f, 1.0f, 0.0f, 0.0f, 0.11999999f, 1.0f, 0.0f, 0.0f, 0.13999999f};
 
-        ahsv_from_argb_sse2(ahsv, argb, size);
+        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
         //ahsv_from_argb_c(ahsv2, argb, size);
         //float f1 = ahsv[20];
         //float f2 = ahsv2[20];
@@ -89,13 +89,13 @@ public class JmhMain {
         }
     }
 
-    //@Benchmark
+    @Benchmark
     public float[] single() {
         ahsv_from_argb_c(ahsv, argb, size);
         return ahsv;
     }
 
-    @Benchmark
+    //@Benchmark
     public float[] scalarComputation() {
         scalarComputation(a, b, c);
         return c;
@@ -107,7 +107,7 @@ public class JmhMain {
         }
     }
 
-    @Benchmark
+    //@Benchmark
     public float[] vectorComputation() {
         vectorComputation(a, b, c);
         return c;

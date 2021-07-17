@@ -1,11 +1,14 @@
 package org.rgbtohsv;
 
-import jdk.incubator.vector.*;
+import jdk.incubator.vector.FloatVector;
+import jdk.incubator.vector.VectorMask;
+import jdk.incubator.vector.VectorOperators;
+import jdk.incubator.vector.VectorSpecies;
 
-import java.util.Arrays;
-
-import static java.lang.Math.*;
-import static jdk.incubator.vector.VectorOperators.*;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static jdk.incubator.vector.VectorOperators.LE;
+import static jdk.incubator.vector.VectorOperators.NEG;
 
 public class RgbToHsv {
 
@@ -116,24 +119,16 @@ public class RgbToHsv {
         throw new RuntimeException("Not yet implemented");
     }
 
-    private static FloatVector fromSingle(VectorSpecies<Float> species, float single) {
-        float[] a = new float[species.length()];
-        Arrays.fill(a, single);
-        return FloatVector.fromArray(SPECIES, a, 0);
-    }
-
     public static void ahsv_from_argb_sse2(float[] dst, float[] src, int length, VectorSpecies<Float> species) {
 
-        //System.out.println(SPECIES.length());
+        var m4o6 = FloatVectorSupport.fromSingle(species, -4.0f / 6.0f);
+        var p0 = FloatVectorSupport.fromSingle(species, 0f);
+        var epsilon = FloatVectorSupport.fromSingle(species, 1e-8f);
+        var p1 = FloatVectorSupport.fromSingle(species, 1.0f);
+
+        var index = FloatVectorSupport.indexVector(species);
 
         final var speciesLength = species.length();
-
-        var m4o6 = FloatVector.fromArray(SPECIES, new float[]{-4.0f / 6.0f, -4.0f / 6.0f, -4.0f / 6.0f, -4.0f / 6.0f}, 0);
-        var p0 = FloatVector.fromArray(SPECIES, new float[]{0f, 0f, 0f, 0f}, 0);
-        var epsilon = FloatVector.fromArray(SPECIES, new float[]{1e-8f, 1e-8f, 1e-8f, 1e-8f}, 0);
-        var index = FloatVector.fromArray(SPECIES, new float[]{0f, 1f, 2f, 3f}, 0);
-        var p1 = FloatVector.fromArray(SPECIES, new float[]{1.0f, 1.0f, 1.0f, 1.0f}, 0);
-
         var f1 = new int[speciesLength];
         var f2 = new int[speciesLength];
         var f3 = new int[speciesLength];
@@ -145,22 +140,16 @@ public class RgbToHsv {
             f3[i] = 2 + i * 4;
             f4[i] = 3 + i * 4;
         }
-        //var f1 = new int[] {0, 4, 8, 12};
-        //var f2 = new int[] {1, 5, 9, 13};
-        //var f3 = new int[] {2, 6, 10, 14};
-        //var f4 = new int[] {3, 7, 11, 15};
 
-        //FloatVector xA, xR, xG, xB;
         FloatVector xG, xB, xA, xR;
         FloatVector xH, xS, xV, xC;
         VectorMask<Float> xX, xY, xZ;
 
         int i = length;
-        //for (; i < SPECIES.loopBound(length); i += SPECIES.length()) {
         int offset = 0;
         while ((i -= speciesLength) >= 0) {
-            // todo: write some masking shit? also this only works when the amount of pixels is 4 aligned.
-            //var va = FloatVector.fromArray(SPECIES, src, i);
+            // todo: this only works when the amount of pixels is 4 aligned.
+            //  needs code to handle leftover pixels. maybe use mask? check jep for details
 
             // Transpose.
             //
@@ -172,11 +161,10 @@ public class RgbToHsv {
             // What we use: xC - Temporary.
             //              xS - Temporary.
             //              xV - Temporary.
-            xA = FloatVector.fromArray(SPECIES, src, offset, f1, 0);
-            xR = FloatVector.fromArray(SPECIES, src, offset, f2, 0);
-            xG = FloatVector.fromArray(SPECIES, src, offset, f3, 0);
-            xB = FloatVector.fromArray(SPECIES, src, offset, f4, 0);
-            //var vb = FloatVector.fromArray(SPECIES, src, i);
+            xA = FloatVector.fromArray(species, src, offset, f1, 0);
+            xR = FloatVector.fromArray(species, src, offset, f2, 0);
+            xG = FloatVector.fromArray(species, src, offset, f3, 0);
+            xB = FloatVector.fromArray(species, src, offset, f4, 0);
 
             // Calculate Value, Chroma, and Saturation.
             //
@@ -222,54 +210,40 @@ public class RgbToHsv {
             xY = xY.not();  // xY <- [V==R || V!=G]
             xZ = xZ.not();  // xZ <- [V==R || V==G]
 
-            //xR.
-            //xR.
-            xR = xR.mul(0, xX.not());  // xR <- [X!=0 ? R : 0]
-            xB = xB.mul(0, xZ.not());  // xB <- [Z!=0 ? B : 0]
-            xG = xG.mul(0, xY.not());  // xG <- [Y!=0 ? G : 0]
+            xR = index.selectFrom(xR, xX);    // xR <- [X!=0 ? R : 0]
+            xB = index.selectFrom(xB, xZ);    // xB <- [Z!=0 ? B : 0]
+            xG = index.selectFrom(xG, xY);    // xG <- [Y!=0 ? G : 0]
 
-            //float[] sn = new float[] {-0.f, -0.f, -0.f, -0.f};
-            //var ff = FloatVector.fromArray(SPECIES, sn, 0);
-            //var xZv = ff.selectFrom(ff, xZ);
-            //var xYv = ff.selectFrom(ff, xY);
-            //xZ.not();
-            //var vfm = VectorMask.fromValues(SPECIES, false, false, false, false);
             xZ = xZ.not();
             xY = xY.not();
 
-            //float[] sn2 = new float[] {0, 0, 0, 0};
-            //var ff2 = FloatVector.fromArray(SPECIES, sn2, 0);
-
-            xG = xG.lanewise(NEG, xZ);//.selectFrom(ff2, xZ);
-            xR = xR.lanewise(NEG, xY);//.selectFrom(ff2, xY);
-            //xR = xR.lanewise(XOR, xYv);
-            //System.out.println(xZv);
+            xG = xG.lanewise(NEG, xZ);      // xG <- [Y!=0 ? (Z==0 ? G : -G) : 0]
+            xR = xR.lanewise(NEG, xY);      // xR <- [X!=0 ? (Y==0 ? R : -R) : 0]
 
             // G is now accumulator.
-            xG = xG.add(xR);
-            xB = xB.lanewise(NEG, xY);
+            xG = xG.add(xR);                 // xG <- [Rx + Gx]
+            xB = xB.lanewise(NEG, xY);       // xB <- [Z!=0 ? (Y==0 ? B : -B) : 0]
 
             //var m6 =
-            xC = xC.mul(-6.f);
-            xG = xG.sub(xB);
+            xC = xC.mul(-6.f);               // xC <- [C*6     ]
+            xG = xG.sub(xB);                 // xG <- [Rx+Gx+Bx]
 
 
-            xH = p0.selectFrom(m4o6, xX); //todo: selectFrom maybe not right. mult by 0 could also be good.
-            xG = xG.div(xC);
-            //System.out.println(xH);
+            xH = p0.selectFrom(m4o6, xX);     // xH <- [V==R ?0 :-4/6]
+            xG = xG.div(xC);                 // xG <- [(Rx+Gx+Bx)/6C]
 
             // Correct the achromatic case - H/S may be infinite (or near) due to division by zero.
-            xH = xH.lanewise(NEG, xZ);
+            xH = xH.lanewise(NEG, xZ);           // xH <- [V==R ? 0 : V==G ? -4/6 : 4/6]
             var xCm = epsilon.compare(LE, xC);
-            //System.out.println(xCm);
-            xH = xH.add(1.f);
+            xH = xH.add(1.f);                   // xH <- [V==R ? 1 : V==G ?  2/6 :10/6]
 
             xG = xG.add(xH);
 
             // Normalize H to a fraction. If it's greater than or equal to 1 then 1 is subtracted
             // to get the Hue at [0..1) domain.
-            xH = index.selectFrom(p1, p1.compare(LE, xG));
+            var xHm = p1.compare(LE, xG);
 
+            xH = index.selectFrom(p1, xHm);
             xS = index.selectFrom(xS, xCm);
             xG = index.selectFrom(xG, xCm);
             xG = xG.sub(xH);
@@ -278,7 +252,6 @@ public class RgbToHsv {
             xG.intoArray(dst, offset, f2, 0);
             xS.intoArray(dst, offset, f3, 0);
             xV.intoArray(dst, offset, f4, 0);
-
 
             offset += 4 * speciesLength;
         }
