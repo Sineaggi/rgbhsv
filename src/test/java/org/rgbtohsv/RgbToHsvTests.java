@@ -265,19 +265,15 @@ public class RgbToHsvTests {
     }
 
     @Test
-    @Disabled("not yet implemented")
+    //@Disabled("not yet implemented")
     public void test4() {
-        var size = 16 * 16 * 16;
+        var size = 4;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
+        float[] ahsv2 = new float[4 * size];
 
         argb_fill(argb, size);
-        //argb[0] = 1; argb[4] = 1; argb[8] = 1; argb[12] = 1;
-        //argb[1] = 0.1f; argb[5] = 0.3f; argb[9] = 0.5f; argb[13] = .7f;
-        //argb[2] = 0.2f; argb[6] = 0.4f; argb[10] = 0.6f; argb[14] = .8f;
-        //argb[3] = 0.3f; argb[7] = .5f; argb[11] = .7f; argb[15] = .9f;
 
-        var new_rbg = new float[argb.length];
         ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
         ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
         ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
@@ -287,16 +283,16 @@ public class RgbToHsvTests {
         ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
         System.out.println("time " + (System.nanoTime() - ki));
 
-        ahsv_from_argb_c(ahsv, argb, size);
-        ahsv_from_argb_c(ahsv, argb, size);
-        ahsv_from_argb_c(ahsv, argb, size);
-        ahsv_from_argb_c(ahsv, argb, size);
-        ahsv_from_argb_c(ahsv, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
         var ki2 = System.nanoTime();
-        ahsv_from_argb_c(ahsv, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
         System.out.println("time " + (System.nanoTime() - ki2));
 
-        ahsv_from_argb_c(new_rbg, ahsv, size);
-        assertArrayEquals(new_rbg, argb, 0.000001f);
+        //ahsv_from_argb_c(ahsv2, ahsv, size);
+        assertArrayEquals(ahsv2, argb, 1e-6f);
     }
 }
