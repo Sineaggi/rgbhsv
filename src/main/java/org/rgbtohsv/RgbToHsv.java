@@ -1,9 +1,6 @@
 package org.rgbtohsv;
 
-import jdk.incubator.vector.FloatVector;
-import jdk.incubator.vector.VectorMask;
-import jdk.incubator.vector.VectorOperators;
-import jdk.incubator.vector.VectorSpecies;
+import jdk.incubator.vector.*;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -135,10 +132,10 @@ public class RgbToHsv {
         var f4 = new int[speciesLength];
 
         for (int i = 0; i < speciesLength; i++) {
-            f1[i] = 0 + i * 4;
-            f2[i] = 1 + i * 4;
-            f3[i] = 2 + i * 4;
-            f4[i] = 3 + i * 4;
+            f1[i] = i * 4 /* + 0 */;
+            f2[i] = i * 4 + 1;
+            f3[i] = i * 4 + 2;
+            f4[i] = i * 4 + 3;
         }
 
         FloatVector xG, xB, xA, xR;
@@ -210,9 +207,9 @@ public class RgbToHsv {
             xY = xY.not();  // xY <- [V==R || V!=G]
             xZ = xZ.not();  // xZ <- [V==R || V==G]
 
-            xR = index.selectFrom(xR, xX);    // xR <- [X!=0 ? R : 0]
-            xB = index.selectFrom(xB, xZ);    // xB <- [Z!=0 ? B : 0]
-            xG = index.selectFrom(xG, xY);    // xG <- [Y!=0 ? G : 0]
+            xR = p0.blend(xR, xX);    // xR <- [X!=0 ? R : 0]
+            xB = p0.blend(xB, xZ);    // xB <- [Z!=0 ? B : 0]
+            xG = p0.blend(xG, xY);    // xG <- [Y!=0 ? G : 0]
 
             xZ = xZ.not();
             xY = xY.not();
@@ -229,7 +226,7 @@ public class RgbToHsv {
             xG = xG.sub(xB);                 // xG <- [Rx+Gx+Bx]
 
 
-            xH = p0.selectFrom(m4o6, xX);     // xH <- [V==R ?0 :-4/6]
+            xH = p0.blend(m4o6, xX);         // xH <- [V==R ?0 :-4/6]
             xG = xG.div(xC);                 // xG <- [(Rx+Gx+Bx)/6C]
 
             // Correct the achromatic case - H/S may be infinite (or near) due to division by zero.
@@ -243,9 +240,9 @@ public class RgbToHsv {
             // to get the Hue at [0..1) domain.
             var xHm = p1.compare(LE, xG);
 
-            xH = index.selectFrom(p1, xHm);
-            xS = index.selectFrom(xS, xCm);
-            xG = index.selectFrom(xG, xCm);
+            xH = p0.blend(p1, xHm);
+            xS = p0.blend(xS, xCm);
+            xG = p0.blend(xG, xCm);
             xG = xG.sub(xH);
 
             xA.intoArray(dst, offset, f1, 0);
