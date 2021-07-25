@@ -15,12 +15,8 @@ dependencies {
     implementation(projects.rgbhsv)
 }
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
-
-}
-
 tasks.test {
+    useJUnitPlatform()
     //jvmArgs?.add("--add-modules=jdk.incubator.vector")
     //jvmArgs?.add("--enable-preview")
     jvmArgs("--add-modules=jdk.incubator.vector", "--enable-preview")
@@ -31,5 +27,6 @@ tasks.withType<JavaCompile> {
 }
 
 application {
-    mainClass.set("org.rgbtohsv.JmhMain")
+    mainClass.set("org.rgbhsv.JmhMain")
+    applicationDefaultJvmArgs = listOf("--add-modules=jdk.incubator.vector", "--enable-preview")
 }

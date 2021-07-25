@@ -1,7 +1,8 @@
-package org.rgbtohsv;
+package org.rgbhsv;
 
 import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorSpecies;
+import org.openjdk.jmh.Main;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Warmup;
@@ -10,18 +11,17 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static org.rgbtohsv.RgbToHsv.ahsv_from_argb_c;
-import static org.rgbtohsv.RgbToHsv.ahsv_from_argb_sse2;
+import static org.rgbhsv.RgbHsv.ahsv_from_argb_c;
+import static org.rgbhsv.RgbHsv.ahsv_from_argb_sse2;
 
 @Fork(value = 3, jvmArgsAppend = {"-server", "-disablesystemassertions"})
 public class JmhMain {
     public static void main(String[] args) throws IOException {
-        org.openjdk.jmh.Main.main(args);
+        Main.main(args);
     }
 
     static void argb_fill(float[] argb, int length) {
@@ -54,7 +54,7 @@ public class JmhMain {
     static float[] ahsv;
 
     static {
-        try (var is = Files.newInputStream(Paths.get("C:\\Users\\Clayton\\Source\\rgbhsv\\example.png"))) {
+        try (var is = Objects.requireNonNull(JmhMain.class.getResourceAsStream("/example.png"), "failed to find example file")) {
             var image = ImageIO.read(is);
 
             int w = image.getWidth();
