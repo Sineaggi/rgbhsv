@@ -2,10 +2,8 @@ package org.rgbtohsv;
 
 import jdk.incubator.vector.*;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
-import static jdk.incubator.vector.VectorOperators.LE;
-import static jdk.incubator.vector.VectorOperators.NEG;
+import static java.lang.Math.*;
+import static jdk.incubator.vector.VectorOperators.*;
 
 public class RgbToHsv {
 
@@ -110,13 +108,99 @@ public class RgbToHsv {
         }
     }
 
-    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_128;
+    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_PREFERRED;
 
-    static void argb_from_ahsv_sse2(float[] dst, float[] src, int length) {
-        throw new RuntimeException("Not yet implemented");
+    static void argb_from_ahsv_sse2(float[] dst, float[] src, int length, VectorSpecies<Float> species) {
+        var m4o6 = FloatVectorSupport.fromSingle(species, -4.0f / 6.0f);
+        var p0 = FloatVectorSupport.fromSingle(species, 0f);
+        var epsilon = FloatVectorSupport.fromSingle(species, 1e-8f);
+        var p1 = FloatVectorSupport.fromSingle(species, 1.0f);
+        var p4 = FloatVectorSupport.fromSingle(species, 4.0f);
+
+        final var speciesLength = species.length();
+        var f1 = new int[speciesLength];
+        var f2 = new int[speciesLength];
+        var f3 = new int[speciesLength];
+        var f4 = new int[speciesLength];
+
+        for (int i = 0; i < speciesLength; i++) {
+            f1[i] = i * 4 /* + 0 */;
+            f2[i] = i * 4 + 1;
+            f3[i] = i * 4 + 2;
+            f4[i] = i * 4 + 3;
+        }
+
+        //x/M = (x*(2^n/M))>>n
+        //var M = 12;
+        //var n = 4; //todo
+        //var magicNumber = Math.pow(2, n) / M;//todo
+
+        int i = length;
+        int offset = 0;
+        while ((i -= speciesLength) >= 0) {
+
+            var xA = FloatVector.fromArray(species, src, offset, f1, 0);
+            var xH = FloatVector.fromArray(species, src, offset, f2, 0);
+            var xS = FloatVector.fromArray(species, src, offset, f3, 0);
+            var xV = FloatVector.fromArray(species, src, offset, f4, 0);
+
+            // the general case
+            // a % b = a - floor(a / b) * b
+            //xH = xH.broadcast(.723f);
+            // k = (n + H / 30) mod 12
+            var ho60 = xH.mul(360).div(60);
+            // todo: how to lanewise mod
+            // todo: #2 maybe since the values are 'reduced' this can work?
+            // todo: tests pass, but we still need to validate this is actually faster/correct
+            FloatVector kR = ho60.add(5);//.mod(6);
+            FloatVector kG = ho60.add(3);//.mod(6);
+            FloatVector kB = ho60.add(1);//.mod(6);
+
+            var zR = kR.compare(GE, 6);
+            var zG = kG.compare(GE, 6);
+            var zB = kB.compare(GE, 6);
+
+            kR = kR.sub(6, zR);
+            kG = kG.sub(6, zG);
+            kB = kB.sub(6, zB);
+
+            var xR = xV.sub(xV.mul(xS).mul(p0.max(kR.min(p4.sub(kR)).min(p1))));
+            var xG = xV.sub(xV.mul(xS).mul(p0.max(kG.min(p4.sub(kG)).min(p1))));
+            var xB = xV.sub(xV.mul(xS).mul(p0.max(kB.min(p4.sub(kB)).min(p1))));
+
+            xA.intoArray(dst, offset, f1, 0);
+            xR.intoArray(dst, offset, f2, 0);
+            xG.intoArray(dst, offset, f3, 0);
+            xB.intoArray(dst, offset, f4, 0);
+
+            offset += 4 * speciesLength;
+        }
     }
 
+    /**
+     * This is translated from code available here https://github.com/wqren/rgbhsv/blob/master/src/rgbhsv.cpp
+     * The code is similar to the paper describing the sse implementation in
+     * https://www.daaam.info/Downloads/Pdfs/proceedings/proceedings_2011/780.pdf
+     * It is assumed that all bitwise and and or functions can be replaced with the operation that has the same result.
+     *
+     * The original paper describes this algorithm as numerically stable.
+     * @param dst
+     * @param src
+     * @param length
+     * @param species
+     */
     public static void ahsv_from_argb_sse2(float[] dst, float[] src, int length, VectorSpecies<Float> species) {
+
+        // todo: note this could probably work out if we add support for masks.
+        //  now we've seen some code like this before, perhaps the code could be modified at build time to generate
+        //  code that contains masks?
+        if (length < species.length()) {
+            // todo: need to handle smaller input
+            throw new RuntimeException("Not Implemented");
+        } else if (length % species.length() != 0) {
+            // todo: need to handle leftover input
+            throw new RuntimeException("Not Implemented");
+        }
 
         var m4o6 = FloatVectorSupport.fromSingle(species, -4.0f / 6.0f);
         var p0 = FloatVectorSupport.fromSingle(species, 0f);
@@ -158,6 +242,7 @@ public class RgbToHsv {
             // What we use: xC - Temporary.
             //              xS - Temporary.
             //              xV - Temporary.
+            // todo: in the future it'd be nice to replace this with a generic (lane width independent) transpose.
             xA = FloatVector.fromArray(species, src, offset, f1, 0);
             xR = FloatVector.fromArray(species, src, offset, f2, 0);
             xG = FloatVector.fromArray(species, src, offset, f3, 0);

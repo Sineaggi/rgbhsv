@@ -1,7 +1,6 @@
 package org.rgbtohsv;
 
 import jdk.incubator.vector.FloatVector;
-import jdk.incubator.vector.VectorSpecies;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,7 +48,7 @@ public class RgbToHsvTests {
 
             System.arraycopy(argb, offset, local_argb, 0, 4);
             ahsv_from_argb_sse2(local_ahsv, local_argb, 1, SPECIES);
-            argb_from_ahsv_sse2(local_argb, local_ahsv, 1);
+            argb_from_ahsv_sse2(local_argb, local_ahsv, 1, SPECIES);
 
             // float should_ahsv[4];
             // ahsv_from_argb_c(should_ahsv, argb, 1);
@@ -74,7 +73,7 @@ public class RgbToHsvTests {
                 //memcpy(local_argb, argb, sizeof(float)* 4);
                 System.arraycopy(argb, offset, local_argb, 0, 4);
                 ahsv_from_argb_sse2(ahsv, argb, 1, SPECIES);
-                argb_from_ahsv_sse2(argb, ahsv, 1);
+                argb_from_ahsv_sse2(argb, ahsv, 1, SPECIES);
             }
 
             offset += 4;
@@ -113,16 +112,19 @@ public class RgbToHsvTests {
     }
 
     @Test
-    @Disabled("not yet implemented")
+    //@Disabled("not yet implemented")
     public void test2() {
-        var size = 16;
-        float[] argb = new float[4 * 16];
-        float[] ahsv = new float[4 * 16];
+        var size = 16 * 32768 * 16;
+        float[] argb_orig = new float[4 * size];
+        float[] ahsv = new float[4 * size];
 
-        argb_fill(argb, size);
+        argb_fill(argb_orig, size);
+
+        ahsv_from_argb_c(ahsv, argb_orig, size);
+        float[] argb = new float[argb_orig.length];
 
         var new_rbg = new float[argb.length];
-        argb_from_ahsv_sse2(ahsv, argb, size);
+        argb_from_ahsv_sse2(argb, ahsv, size, SPECIES);
         argb_from_ahsv_c(new_rbg, ahsv, size);
         assertArrayEquals(new_rbg, argb, 0.000001f);
     }
@@ -147,8 +149,8 @@ public class RgbToHsvTests {
     }
 
     @Test
-    @DisplayName("test monochrome")
-    public void test33() {
+    //@DisplayName("test monochrome")
+    public void testMonochrome() {
         var size = 4;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
@@ -166,18 +168,44 @@ public class RgbToHsvTests {
     }
 
     @Test
-    @DisplayName("test white")
-    public void test333() {
-        var size = 4;
+    @DisplayName("test 128")
+    public void test33355() {
+        var size = 8;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
         float[] ahsv2 = new float[4 * size];
 
-        //argb_fill(argb, size);
-        argb[0] = 1; argb[4] = 1; argb[8] = 1; argb[12] = 1;
-        argb[1] = 1f; argb[5] = 1f; argb[9] = 1f; argb[13] = 1f;
-        argb[2] = 1f; argb[6] = 1f; argb[10] = 1f; argb[14] = 1f;
-        argb[3] = 1f; argb[7] = 1f; argb[11] = 1f; argb[15] = 1f;
+        argb_fill(argb, size);
+
+        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        assertArrayEquals(ahsv, ahsv2, 1e-7f);
+    }
+
+    @Test
+    @Disabled("not finished")
+    public void test_128_shuffle() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] ahsv2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        //ahsv_from_argb_sse2(ahsv, argb, size);
+        ahsv_from_argb_c(ahsv2, argb, size);
+        assertArrayEquals(ahsv, ahsv2, 1e-7f);
+    }
+
+    @Test
+    @DisplayName("test complete white")
+    public void testWhite() {
+        var size = 16;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] ahsv2 = new float[4 * size];
+
+        Arrays.fill(argb, 1.f);
 
         ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
         ahsv_from_argb_c(ahsv2, argb, size);
@@ -186,19 +214,14 @@ public class RgbToHsvTests {
 
     @Test
     @DisplayName("test argb fill")
-    public void test3334() {
+    public void testArgbFill() {
         var size = 8;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
         float[] ahsv2 = new float[4 * size];
 
         argb_fill(argb, size);
-        //argb[0] = 1; argb[4] = 1; argb[8] = 1; argb[12] = 1;
-        //argb[1] = 1f; argb[5] = 1f; argb[9] = 1f; argb[13] = 1f;
-        //argb[2] = 1f; argb[6] = 1f; argb[10] = 1f; argb[14] = 1f;
-        //argb[3] = 1f; argb[7] = 1f; argb[11] = 1f; argb[15] = 1f;
 
-        //var size2 = 8;
         float[] argb2 = new float[4 * 4];
         System.arraycopy(argb, 16, argb2, 0, 16);
         float[] argb3 = new float[] {1.0f, 0.0f, 0.0f, 0.08f, 1.0f, 0.0f, 0.0f, 0.099999994f, 1.0f, 0.0f, 0.0f, 0.11999999f, 1.0f, 0.0f, 0.0f, 0.13999999f};
@@ -267,7 +290,7 @@ public class RgbToHsvTests {
     @Test
     //@Disabled("not yet implemented")
     public void test4() {
-        var size = 4;
+        var size = 1048576;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
         float[] ahsv2 = new float[4 * size];
