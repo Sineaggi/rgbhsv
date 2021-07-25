@@ -3,13 +3,22 @@ package org.rgbtohsv;
 import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorSpecies;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Warmup;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import static org.rgbtohsv.RgbToHsv.ahsv_from_argb_c;
 import static org.rgbtohsv.RgbToHsv.ahsv_from_argb_sse2;
 
+@Fork(value = 3, jvmArgsAppend = {"-server", "-disablesystemassertions"})
 public class JmhMain {
     public static void main(String[] args) throws IOException {
         org.openjdk.jmh.Main.main(args);
@@ -40,16 +49,37 @@ public class JmhMain {
         }
     }
 
-    static int size = 16384;
-    static float[] argb = new float[4 * size];
-    static float[] ahsv = new float[4 * size];
-    //static float[] ahsv2 = new float[4 * size];
+    static int size;
+    static float[] argb;
+    static float[] ahsv;
 
     static {
-        argb_fill(argb, size);
+        try (var is = Files.newInputStream(Paths.get("C:\\Users\\Clayton\\Source\\rgbhsv\\example.png"))) {
+            var image = ImageIO.read(is);
+
+            int w = image.getWidth();
+            int h = image.getHeight();
+
+            int[] dataBuffInt = image.getRGB(0, 0, w, h, null, 0, w);
+            //System.out.println(dataBuffInt);
+            size = dataBuffInt.length;
+            argb = new float[size * 4];
+            ahsv = new float[size * 4];
+
+            for (int i = 0; i < size; i++) {
+                var c = new Color(dataBuffInt[i]);
+                argb[0 + 4 * i] = c.getAlpha() / 255f;
+                argb[1 + 4 * i] = c.getRed() / 255f;
+                argb[2 + 4 * i] = c.getGreen() / 255f;
+                argb[3 + 4 * i] = c.getBlue() / 255f;
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
     }
 
     @Benchmark
+    @Warmup(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
     public float[] vector() {
         //var size = 16384;
         //float[] argb = new float[4 * size];
@@ -90,6 +120,7 @@ public class JmhMain {
     }
 
     @Benchmark
+    @Warmup(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
     public float[] single() {
         ahsv_from_argb_c(ahsv, argb, size);
         return ahsv;

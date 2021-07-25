@@ -1,4 +1,4 @@
-package org.rgbtohsv;
+package org.rgbhsv;
 
 import jdk.incubator.vector.FloatVector;
 import org.junit.jupiter.api.Disabled;
@@ -9,10 +9,10 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.rgbtohsv.RgbToHsv.*;
+import static org.rgbhsv.RgbHsv.*;
 import static java.lang.Math.*;
 
-public class RgbToHsvTests {
+public class RgbHsvTests {
     static void argb_fill(float[] argb, int length) {
         int i = length, offset = 0;
 

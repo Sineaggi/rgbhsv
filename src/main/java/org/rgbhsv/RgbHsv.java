@@ -1,11 +1,11 @@
-package org.rgbtohsv;
+package org.rgbhsv;
 
 import jdk.incubator.vector.*;
 
 import static java.lang.Math.*;
 import static jdk.incubator.vector.VectorOperators.*;
 
-public class RgbToHsv {
+public class RgbHsv {
 
     public static void ahsv_from_argb_c(float[] dst, float []src, int length) {
         for (int i = length, offset = 0; i > 0; i--, offset += 4) {

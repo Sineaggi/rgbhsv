@@ -1,4 +1,4 @@
-package org.rgbtohsv;
+package org.rgbhsv;
 
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.VectorSpecies;
