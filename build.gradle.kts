@@ -14,12 +14,8 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
-
-}
-
 tasks.test {
+    useJUnitPlatform()
     //jvmArgs?.add("--add-modules=jdk.incubator.vector")
     //jvmArgs?.add("--enable-preview")
     jvmArgs("--add-modules=jdk.incubator.vector", "--enable-preview")
