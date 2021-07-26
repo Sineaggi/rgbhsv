@@ -130,8 +130,8 @@ public class RgbHsvTests {
     }
 
     @Test
-    @DisplayName("test different pixels")
-    public void test3() {
+    @Disabled
+    public void testDifferentPixels() {
         var size = 4;
         float[] argb = new float[4 * size];
         float[] ahsv = new float[4 * size];
@@ -149,7 +149,6 @@ public class RgbHsvTests {
     }
 
     @Test
-    //@DisplayName("test monochrome")
     public void testMonochrome() {
         var size = 4;
         float[] argb = new float[4 * size];
@@ -167,20 +166,20 @@ public class RgbHsvTests {
         assertArrayEquals(ahsv, ahsv2, 1e-7f);
     }
 
-    @Test
-    @DisplayName("test 128")
-    public void test33355() {
-        var size = 8;
-        float[] argb = new float[4 * size];
-        float[] ahsv = new float[4 * size];
-        float[] ahsv2 = new float[4 * size];
-
-        argb_fill(argb, size);
-
-        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
-        ahsv_from_argb_c(ahsv2, argb, size);
-        assertArrayEquals(ahsv, ahsv2, 1e-7f);
-    }
+    //@Test
+    //@DisplayName("test 128")
+    //public void test33355() {
+    //    var size = 8;
+    //    float[] argb = new float[4 * size];
+    //    float[] ahsv = new float[4 * size];
+    //    float[] ahsv2 = new float[4 * size];
+//
+    //    argb_fill(argb, size);
+//
+    //    ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
+    //    ahsv_from_argb_c(ahsv2, argb, size);
+    //    assertArrayEquals(ahsv, ahsv2, 1e-7f);
+    //}
 
     @Test
     @Disabled("not finished")
@@ -198,7 +197,6 @@ public class RgbHsvTests {
     }
 
     @Test
-    @DisplayName("test complete white")
     public void testWhite() {
         var size = 16;
         float[] argb = new float[4 * size];
@@ -213,7 +211,81 @@ public class RgbHsvTests {
     }
 
     @Test
-    @DisplayName("test argb fill")
+    public void testRoundTrip() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
+        argb_from_ahsv_sse2(argb2, ahsv, size, SPECIES);
+
+        assertArrayEquals(argb, argb2);
+    }
+
+    @Test
+    public void testRoundTripScalar() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        ahsv_from_argb_c(ahsv, argb, size);
+        argb_from_ahsv_c(argb2, ahsv, size);
+
+        assertArrayEquals(argb, argb2);
+    }
+
+    @Test
+    @DisplayName("test round trip wide")
+    public void testRoundTripWide() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        float[] src_a = new float[size], src_r = new float[size], src_g = new float[size], src_b = new float[size];
+        float[] dst_a = new float[size], dst_h = new float[size], dst_s = new float[size], dst_v = new float[size];
+        float[] dst2_a = new float[size], dst2_r = new float[size], dst2_g = new float[size], dst2_b = new float[size];
+
+        split(src_a, src_r, src_g, src_b, argb, size);
+
+        ahsv_from_argb_sse2(dst_a, dst_h, dst_s, dst_v, src_a, src_r, src_g, src_b, size, SPECIES);
+        argb_from_ahsv_sse2(dst2_a, dst2_r, dst2_g, dst2_b, dst_a, dst_h, dst_s, dst_v, size, SPECIES);
+
+        recombine(argb2, dst2_a, dst2_r, dst2_g, dst2_b, size);
+
+        assertArrayEquals(argb, argb2);
+    }
+
+    @Test
+    public void testRoundTripWideScalar() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        float[] src_a = new float[size], src_r = new float[size], src_g = new float[size], src_b = new float[size];
+        float[] dst_a = new float[size], dst_h = new float[size], dst_s = new float[size], dst_v = new float[size];
+        float[] dst2_a = new float[size], dst2_r = new float[size], dst2_g = new float[size], dst2_b = new float[size];
+
+        split(src_a, src_r, src_g, src_b, argb, size);
+
+        ahsv_from_argb_c(dst_a, dst_h, dst_s, dst_v, src_a, src_r, src_g, src_b, size);
+        argb_from_ahsv_c(dst2_a, dst2_r, dst2_g, dst2_b, dst_a, dst_h, dst_s, dst_v, size);
+
+        recombine(argb2, dst2_a, dst2_r, dst2_g, dst2_b, size);
+
+        assertArrayEquals(argb, argb2);
+    }
+
+    @Test
     public void testArgbFill() {
         var size = 8;
         float[] argb = new float[4 * size];
@@ -285,6 +357,85 @@ public class RgbHsvTests {
         float f1 = ahsv[20];
         float f2 = ahsv2[20];
         assertArrayEquals(ahsv, ahsv2, 1e-6f);
+    }
+
+    @Test
+    @DisplayName("test argb fill but massive")
+    public void testmassive2() {
+        var size = 16384;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] ahsv2 = new float[4 * size];
+        float[] ahsv3 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        float[] src_a = new float[size], src_r = new float[size], src_g = new float[size], src_b = new float[size];
+        float[] dst_a = new float[size], dst_h = new float[size], dst_s = new float[size], dst_v = new float[size];
+
+        split(src_a, src_r, src_g, src_b, argb, size);
+
+        ahsv_from_argb_c(ahsv2, argb, size);
+
+        var species = FloatVector.SPECIES_PREFERRED;
+        ahsv_from_argb_sse2(ahsv, argb, size, species);
+        assertArrayEquals(ahsv, ahsv2, 1e-6f);
+
+        ahsv_from_argb_sse2(dst_a, dst_h, dst_s, dst_v,
+                src_a, src_r, src_g, src_b, size, species);
+        recombine(ahsv3, dst_a, dst_h, dst_s, dst_v, size);
+        assertArrayEquals(ahsv2, ahsv3, 1e-6f);
+
+        assertArrayEquals(ahsv, ahsv3, 1e-6f);
+    }
+
+    @Test
+    @DisplayName("test ahsv fill but massive")
+    public void testmassive3() {
+        var size = 16384;
+        float[] ahsv = new float[4 * size];
+        float[] argb = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+        float[] argb3 = new float[4 * size];
+
+        argb_fill(argb, size);
+        ahsv_from_argb_c(ahsv, argb, size);
+
+        float[] src_a = new float[size], src_h = new float[size], src_s = new float[size], src_v = new float[size];
+        float[] dst_a = new float[size], dst_r = new float[size], dst_g = new float[size], dst_b = new float[size];
+
+        split(src_a, src_h, src_s, src_v, ahsv, size);
+
+        argb_from_ahsv_c(argb2, ahsv, size);
+
+        var species = FloatVector.SPECIES_PREFERRED;
+        argb_from_ahsv_sse2(argb, ahsv, size, species);
+        assertArrayEquals(argb, argb2, 1e-6f);
+
+        argb_from_ahsv_sse2(dst_a, dst_r, dst_g, dst_b,
+                src_a, src_h, src_s, src_v, size, species);
+        recombine(argb3, dst_a, dst_r, dst_g, dst_b, size);
+        assertArrayEquals(argb2, argb3, 1e-6f);
+
+        assertArrayEquals(argb, argb3, 1e-6f);
+    }
+
+    void split(float[] dst1, float[] dst2, float[] dst3, float[] dst4, float[] src, int size) {
+        for (int i = 0; i < size; i++) {
+            dst1[i] = src[i * 4 + 0];
+            dst2[i] = src[i * 4 + 1];
+            dst3[i] = src[i * 4 + 2];
+            dst4[i] = src[i * 4 + 3];
+        }
+    }
+
+    void recombine(float[] dst, float[] src1, float[] src2, float[] src3, float[] src4, int size) {
+        for (int i = 0; i < size; i++) {
+            dst[i * 4 + 0] = src1[i];
+            dst[i * 4 + 1] = src2[i];
+            dst[i * 4 + 2] = src3[i];
+            dst[i * 4 + 3] = src4[i];
+        }
     }
 
     @Test
