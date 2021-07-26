@@ -6,6 +6,7 @@ import org.openjdk.jmh.Main;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -15,10 +16,9 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static org.rgbhsv.RgbHsv.ahsv_from_argb_c;
-import static org.rgbhsv.RgbHsv.ahsv_from_argb_sse2;
+import static org.rgbhsv.RgbHsv.*;
 
-@Fork(value = 3, jvmArgsAppend = {"-server", "-disablesystemassertions"})
+@Fork(value = 1, jvmArgsAppend = {"-server", "-disablesystemassertions"})
 public class JmhMain {
     public static void main(String[] args) throws IOException {
         Main.main(args);
@@ -53,6 +53,16 @@ public class JmhMain {
     static float[] argb;
     static float[] ahsv;
 
+    static float[] argb_a;
+    static float[] argb_r;
+    static float[] argb_g;
+    static float[] argb_b;
+
+    static float[] ahsv_a;
+    static float[] ahsv_h;
+    static float[] ahsv_s;
+    static float[] ahsv_v;
+
     static {
         try (var is = Objects.requireNonNull(JmhMain.class.getResourceAsStream("/example.png"), "failed to find example file")) {
             var image = ImageIO.read(is);
@@ -66,44 +76,30 @@ public class JmhMain {
             argb = new float[size * 4];
             ahsv = new float[size * 4];
 
+            argb_a = new float[size];
+            argb_r = new float[size];
+            argb_g = new float[size];
+            argb_b = new float[size];
+            ahsv_a = new float[size];
+            ahsv_h = new float[size];
+            ahsv_s = new float[size];
+            ahsv_v = new float[size];
+
             for (int i = 0; i < size; i++) {
                 var c = new Color(dataBuffInt[i]);
                 argb[0 + 4 * i] = c.getAlpha() / 255f;
                 argb[1 + 4 * i] = c.getRed() / 255f;
                 argb[2 + 4 * i] = c.getGreen() / 255f;
                 argb[3 + 4 * i] = c.getBlue() / 255f;
+
+                argb_a[i] = c.getAlpha() / 255f;
+                argb_r[i] = c.getRed() / 255f;
+                argb_g[i] = c.getGreen() / 255f;
+                argb_b[i] = c.getBlue() / 255f;
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    @Benchmark
-    @Warmup(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
-    public float[] vector() {
-        //var size = 16384;
-        //float[] argb = new float[4 * size];
-        //float[] ahsv = new float[4 * size];
-        //float[] ahsv2 = new float[4 * size];
-//
-        //argb_fill(argb, size);
-        //argb = new float[] {1.0f, 0.0f, 0.0f, 0.08f, 1.0f, 0.0f, 0.0f, 0.099999994f, 1.0f, 0.0f, 0.0f, 0.11999999f, 1.0f, 0.0f, 0.0f, 0.13999999f};
-        //argb[0] = 1; argb[4] = 1; argb[8] = 1; argb[12] = 1;
-        //argb[1] = 1f; argb[5] = 1f; argb[9] = 1f; argb[13] = 1f;
-        //argb[2] = 1f; argb[6] = 1f; argb[10] = 1f; argb[14] = 1f;
-        //argb[3] = 1f; argb[7] = 1f; argb[11] = 1f; argb[15] = 1f;
-
-        //var size2 = 8;
-        //float[] argb2 = new float[4 * 4];
-        //System.arraycopy(argb, 16, argb2, 0, 16);
-        //float[] argb3 = new float[] {1.0f, 0.0f, 0.0f, 0.08f, 1.0f, 0.0f, 0.0f, 0.099999994f, 1.0f, 0.0f, 0.0f, 0.11999999f, 1.0f, 0.0f, 0.0f, 0.13999999f};
-
-        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
-        //ahsv_from_argb_c(ahsv2, argb, size);
-        //float f1 = ahsv[20];
-        //float f2 = ahsv2[20];
-        //assertArrayEquals(ahsv, ahsv2, 1e-6f);
-        return ahsv;
     }
 
     //static int size = 16384;
@@ -120,10 +116,78 @@ public class JmhMain {
     }
 
     @Benchmark
-    @Warmup(iterations = 3, time = 3, timeUnit = TimeUnit.SECONDS)
-    public float[] single() {
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void ahsv_from_argb_vector(Blackhole blackhole) {
+        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
+        blackhole.consume(ahsv);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void ahsv_from_argb_scalar(Blackhole blackhole) {
         ahsv_from_argb_c(ahsv, argb, size);
-        return ahsv;
+        blackhole.consume(ahsv);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void ahsv_from_argb_scalar2(Blackhole blackhole) {
+        ahsv_from_argb_c(ahsv_a, ahsv_h, ahsv_s, ahsv_v,
+                argb_a,argb_r, argb_g, argb_b, size);
+        blackhole.consume(ahsv_a);
+        blackhole.consume(ahsv_h);
+        blackhole.consume(ahsv_s);
+        blackhole.consume(ahsv_v);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void ahsv_from_argb_vector2(Blackhole blackhole) {
+        ahsv_from_argb_sse2(ahsv_a, ahsv_h, ahsv_s, ahsv_v,
+                argb_a,argb_r, argb_g, argb_b, size, SPECIES);
+        blackhole.consume(ahsv_a);
+        blackhole.consume(ahsv_h);
+        blackhole.consume(ahsv_s);
+        blackhole.consume(ahsv_v);
+    }
+
+    // ahsv
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void argb_from_ahsv_vector(Blackhole blackhole) {
+        argb_from_ahsv_sse2(argb, ahsv, size, SPECIES);
+        blackhole.consume(argb);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void argb_from_ahsv_scalar(Blackhole blackhole) {
+        argb_from_ahsv_c(argb, ahsv, size);
+        blackhole.consume(argb);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void argb_from_ahsv_scalar2(Blackhole blackhole) {
+        argb_from_ahsv_c(argb_a,argb_r, argb_g, argb_b,
+                ahsv_a, ahsv_h, ahsv_s, ahsv_v,
+                size);
+        blackhole.consume(ahsv_a);
+        blackhole.consume(ahsv_h);
+        blackhole.consume(ahsv_s);
+        blackhole.consume(ahsv_v);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void argb_from_ahsv_vector2(Blackhole blackhole) {
+        argb_from_ahsv_sse2(argb_a,argb_r, argb_g, argb_b,
+                ahsv_a, ahsv_h, ahsv_s, ahsv_v, size, SPECIES);
+        blackhole.consume(ahsv_a);
+        blackhole.consume(ahsv_h);
+        blackhole.consume(ahsv_s);
+        blackhole.consume(ahsv_v);
     }
 
     //@Benchmark

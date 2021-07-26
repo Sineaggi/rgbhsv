@@ -1,9 +1,6 @@
 plugins {
-    `java-library`
+    id("rgbhsv.library-conventions")
 }
-
-group = "org.example"
-version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -12,15 +9,4 @@ repositories {
 dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
-}
-
-tasks.test {
-    useJUnitPlatform()
-    //jvmArgs?.add("--add-modules=jdk.incubator.vector")
-    //jvmArgs?.add("--enable-preview")
-    jvmArgs("--add-modules=jdk.incubator.vector", "--enable-preview")
-}
-
-tasks.withType<JavaCompile> {
-    options.compilerArgs.addAll(listOf("--add-modules=jdk.incubator.vector", "--enable-preview"))
 }
