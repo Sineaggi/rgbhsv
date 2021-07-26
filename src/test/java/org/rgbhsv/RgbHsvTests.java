@@ -286,6 +286,53 @@ public class RgbHsvTests {
     }
 
     @Test
+    public void testRoundTripWideScalarArgb() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] argb2 = new float[4 * size];
+
+        argb_fill(argb, size);
+        ahsv_from_argb_c(ahsv, argb, size);
+
+        float[] src_a = new float[size], src_h = new float[size], src_s = new float[size], src_v = new float[size];
+        float[] dst_a = new float[size], dst_r = new float[size], dst_g = new float[size], dst_b = new float[size];
+        //float[] dst2_a = new float[size], dst2_r = new float[size], dst2_g = new float[size], dst2_b = new float[size];
+
+        split(src_a, src_h, src_s, src_v, ahsv, size);
+
+        argb_from_ahsv_c(dst_a, dst_r, dst_g, dst_b, src_a, src_h, src_s, src_v, size);
+        argb_from_ahsv_c(argb, ahsv, size);
+
+        recombine(argb2, dst_a, dst_r, dst_g, dst_b, size);
+
+        assertArrayEquals(argb, argb2);
+    }
+
+    @Test
+    public void testWideVsNormalAhsv() {
+        var size = 8;
+        float[] argb = new float[4 * size];
+        float[] ahsv = new float[4 * size];
+        float[] ahsv2 = new float[4 * size];
+
+        argb_fill(argb, size);
+
+        float[] src_a = new float[size], src_r = new float[size], src_g = new float[size], src_b = new float[size];
+        float[] dst_a = new float[size], dst_h = new float[size], dst_s = new float[size], dst_v = new float[size];
+        float[] dst2_a = new float[size], dst2_r = new float[size], dst2_g = new float[size], dst2_b = new float[size];
+
+        split(src_a, src_r, src_g, src_b, argb, size);
+
+        ahsv_from_argb_c(dst_a, dst_h, dst_s, dst_v, src_a, src_r, src_g, src_b, size);
+        ahsv_from_argb_c(ahsv, argb, size);
+
+        recombine(ahsv2, dst_a, dst_h, dst_s, dst_v, size);
+
+        assertArrayEquals(ahsv, ahsv2);
+    }
+
+    @Test
     public void testArgbFill() {
         var size = 8;
         float[] argb = new float[4 * size];
