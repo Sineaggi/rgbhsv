@@ -24,16 +24,21 @@ java {
     toolchain {
         // to get this to work, please download the jdk16 pre-release binaries
         // and set the JDK16 env var (e.g. `export JDK16=~/Downloads/jdk-16/Contents/Home && ./gradlew test`)
-        languageVersion.set(JavaLanguageVersion.of(19))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
 }
 
 dependencies {
     jmh(libs.jmh.core)
     jmh(libs.jmh.generator.annprocess)
+}
 
-    testImplementation(libs.junit.jupiter.api)
-    testRuntimeOnly(libs.junit.jupiter.engine)
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter()
+        }
+    }
 }
 
 jmh {
@@ -42,20 +47,20 @@ jmh {
     fork.set(2)
     jvmArgs.addAll(listOf("--add-modules=jdk.incubator.vector", "--enable-preview"))
     javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(19))
+        languageVersion.set(JavaLanguageVersion.of(25))
     })
 }
 
 tasks.jmhRunBytecodeGenerator {
     javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(19))
+        languageVersion.set(JavaLanguageVersion.of(25))
     })
     jvmArgs.addAll("--add-modules=jdk.incubator.vector", "--enable-preview")
 }
 
 tasks.jmhCompileGeneratedClasses {
     javaCompiler.set(javaToolchains.compilerFor {
-        languageVersion.set(JavaLanguageVersion.of(19))
+        languageVersion.set(JavaLanguageVersion.of(25))
     })
 }
 
