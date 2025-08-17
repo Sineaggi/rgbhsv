@@ -125,6 +125,13 @@ public class JmhMain {
 
     @Benchmark
     @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
+    public void ahsv_from_argb_vector_composed(Blackhole blackhole) {
+        ahsv_from_argb_sse2(ahsv, argb, size, SPECIES);
+        blackhole.consume(ahsv);
+    }
+
+    @Benchmark
+    @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
     public void ahsv_from_argb_scalar(Blackhole blackhole) {
         ahsv_from_argb_c(ahsv, argb, size);
         blackhole.consume(ahsv);
@@ -165,6 +172,7 @@ public class JmhMain {
 
     // ahsv
 
+    /*
     @Benchmark
     @Warmup(iterations = 1, time = 1, timeUnit = TimeUnit.SECONDS)
     public void argb_from_ahsv_vector(Blackhole blackhole) {
@@ -212,6 +220,7 @@ public class JmhMain {
         blackhole.consume(ahsv_s);
         blackhole.consume(ahsv_v);
     }
+     */
 
     //@Benchmark
     public float[] scalarComputation() {

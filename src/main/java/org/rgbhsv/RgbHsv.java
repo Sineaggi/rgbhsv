@@ -2,6 +2,8 @@ package org.rgbhsv;
 
 import jdk.incubator.vector.*;
 
+import java.util.function.IntFunction;
+
 import static java.lang.Math.*;
 import static jdk.incubator.vector.VectorOperators.*;
 
@@ -362,7 +364,7 @@ public class RgbHsv {
         var epsilon = FloatVectorSupport.fromSingle(species, 1e-8f);
         var p1 = FloatVectorSupport.fromSingle(species, 1.0f);
 
-        var index = FloatVectorSupport.indexVector(species);
+        //var index = FloatVectorSupport.indexVector(species);
 
         final var speciesLength = species.length();
         var f1 = new int[speciesLength];
@@ -491,6 +493,151 @@ public class RgbHsv {
             xV.intoArray(dst, offset, f4, 0);
 
             offset += 4 * speciesLength;
+        }
+    }
+
+    // todo: this will be a composed funciton.
+    // the goal is, if this is as fast as the other options, to use this instead of
+    // transposed/swizzled data.
+    // all of that will be hoisted out to it's own setup/teardown.
+    public static void ahsv_from_argb_sse2(
+            IntFunction<FloatVector> f1, IntFunction<FloatVector> f2, IntFunction<FloatVector> f3, IntFunction<FloatVector> f4,
+            //dst_a, float[] dst_h, float[] dst_s, float[] dst_v,
+            //float[] src_a, float[] src_r, float[] src_g, float[] src_b,
+            int length, VectorSpecies<Float> species) {
+
+        // todo: note this could probably work out if we add support for masks.
+        //  now we've seen some code like this before, perhaps the code could be modified at build time to generate
+        //  code that contains masks?
+        if (length < species.length()) {
+            // todo: need to handle smaller input
+            throw new RuntimeException("Not Implemented");
+        } else if (length % species.length() != 0) {
+            // todo: need to handle leftover input
+            throw new RuntimeException("Not Implemented");
+        }
+
+        var m4o6 = FloatVectorSupport.fromSingle(species, -4.0f / 6.0f);
+        var p0 = FloatVectorSupport.fromSingle(species, 0f);
+        var epsilon = FloatVectorSupport.fromSingle(species, 1e-8f);
+        var p1 = FloatVectorSupport.fromSingle(species, 1.0f);
+
+        final var speciesLength = species.length();
+
+        FloatVector xG, xB, xA, xR;
+        FloatVector xH, xS, xV, xC;
+        VectorMask<Float> xX, xY, xZ;
+
+        int i = length;
+        int offset = 0;
+        while ((i -= speciesLength) >= 0) {
+            // todo: this only works when the amount of pixels is 4 aligned.
+            //  needs code to handle leftover pixels. maybe use mask? check jep for details
+
+            // Transpose.
+            //
+            // What we get: xA == [A3 A2 A1 A0] - Alpha channel.
+            //              xR == [R3 R2 R1 R0] - Red   channel.
+            //              xG == [G3 G2 G1 G0] - Green channel.
+            //              xB == [B3 B2 B1 B0] - Blue  channel.
+            //
+            // What we use: xC - Temporary.
+            //              xS - Temporary.
+            //              xV - Temporary.
+            // todo: in the future it'd be nice to replace this with a generic (lane width independent) transpose.
+            xA = FloatVector.fromArray(species, src_a, offset);
+            xR = FloatVector.fromArray(species, src_r, offset);
+            xG = FloatVector.fromArray(species, src_g, offset);
+            xB = FloatVector.fromArray(species, src_b, offset);
+
+            // Calculate Value, Chroma, and Saturation.
+            //
+            // What we get: xC == [C3 C2 C1 C0 ] - Chroma.
+            //              xV == [V3 V2 V1 V0 ] - Value == Max(R, G, B).
+            //              xS == [S3 S2 S1 S0 ] - Saturation, possibly incorrect due to division
+            //                                     by zero, corrected at the end of the algorithm.
+            //
+            // What we use: xR
+            //              xG
+            //              xB
+            xS = xG.max(xB);                // xS <- [max(G, B)]
+            xC = xG.min(xB);                // xC <- [min(G, B)]
+
+            xS = xS.max(xR);                // xS <- [max(G, B, R)]
+            xC = xC.min(xR);                // xC <- [min(G, B, R)]
+
+            xV = xS;                          // xV <- [V    ]
+            xS = xS.sub(xC);                 // xS <- [V - m]
+            xS = xS.div(xV);                // xS <- [S    ]
+
+            xC = xC.sub(xV);                // xC <- [V + m]
+
+            // Calculate Hue.
+            //
+            // What we get: xG - Hue
+            //              xC - Chroma * 6.
+            //
+            // What we use: xR - Destroyed during calculation.
+            //              xG - Destroyed during calculation.
+            //              xB - Destroyed during calculation.
+            //              xC - Chroma.
+            //              xX - Mask.
+            //              xY - Mask.
+            //              xZ - Mask.
+
+            xZ = xV.compare(VectorOperators.EQ, xG);     // xZ <- [V==G]
+            xX = xV.compare(VectorOperators.NE, xR);     // xX <- [V!=R]
+
+            xY = xX.and(xZ);                               // xY <- [V!=R && V==G]
+            xZ = xX.andNot(xZ);                           // xZ <- [V!=R && V!=G]
+
+            xY = xY.not();  // xY <- [V==R || V!=G]
+            xZ = xZ.not();  // xZ <- [V==R || V==G]
+
+            xR = p0.blend(xR, xX);    // xR <- [X!=0 ? R : 0]
+            xB = p0.blend(xB, xZ);    // xB <- [Z!=0 ? B : 0]
+            xG = p0.blend(xG, xY);    // xG <- [Y!=0 ? G : 0]
+
+            xZ = xZ.not();
+            xY = xY.not();
+
+            xG = xG.lanewise(NEG, xZ);      // xG <- [Y!=0 ? (Z==0 ? G : -G) : 0]
+            xR = xR.lanewise(NEG, xY);      // xR <- [X!=0 ? (Y==0 ? R : -R) : 0]
+
+            // G is now accumulator.
+            xG = xG.add(xR);                 // xG <- [Rx + Gx]
+            xB = xB.lanewise(NEG, xY);       // xB <- [Z!=0 ? (Y==0 ? B : -B) : 0]
+
+            //var m6 =
+            xC = xC.mul(-6.f);               // xC <- [C*6     ]
+            xG = xG.sub(xB);                 // xG <- [Rx+Gx+Bx]
+
+
+            xH = p0.blend(m4o6, xX);         // xH <- [V==R ?0 :-4/6]
+            xG = xG.div(xC);                 // xG <- [(Rx+Gx+Bx)/6C]
+
+            // Correct the achromatic case - H/S may be infinite (or near) due to division by zero.
+            xH = xH.lanewise(NEG, xZ);           // xH <- [V==R ? 0 : V==G ? -4/6 : 4/6]
+            var xCm = epsilon.compare(LE, xC);
+            xH = xH.add(1.f);                   // xH <- [V==R ? 1 : V==G ?  2/6 :10/6]
+
+            xG = xG.add(xH);
+
+            // Normalize H to a fraction. If it's greater than or equal to 1 then 1 is subtracted
+            // to get the Hue at [0..1) domain.
+            var xHm = p1.compare(LE, xG);
+
+            xH = p0.blend(p1, xHm);
+            xS = p0.blend(xS, xCm);
+            xG = p0.blend(xG, xCm);
+            xG = xG.sub(xH);
+
+            xA.intoArray(dst_a, offset);
+            xG.intoArray(dst_h, offset);
+            xS.intoArray(dst_s, offset);
+            xV.intoArray(dst_v, offset);
+
+            offset += speciesLength;
         }
     }
 
