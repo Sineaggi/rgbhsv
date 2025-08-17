@@ -58,7 +58,7 @@ public class RgbHsv {
             int length) {
         for (int i = length, offset = 0; i > 0; i--, offset += 1) {
             float a = src_a[offset];
-            float r = src_b[offset];
+            float r = src_r[offset];
             float g = src_g[offset];
             float b = src_b[offset];
 

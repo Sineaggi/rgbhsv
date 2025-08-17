@@ -112,7 +112,7 @@ public class RgbHsvTests {
     }
 
     @Test
-    //@Disabled("not yet implemented")
+    @Disabled("oom")
     public void test2() {
         var size = 16 * 32768 * 16;
         float[] argb_orig = new float[4 * size];
@@ -130,7 +130,6 @@ public class RgbHsvTests {
     }
 
     @Test
-    @Disabled
     public void testDifferentPixels() {
         var size = 4;
         float[] argb = new float[4 * size];
