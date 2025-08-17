@@ -1,6 +1,6 @@
 plugins {
     `java-library`
-    id("me.champeau.jmh") version("0.6.7")
+    id("me.champeau.jmh") version("0.7.3")
 }
 
 group = "org.rgbhsv"
