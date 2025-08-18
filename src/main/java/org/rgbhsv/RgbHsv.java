@@ -6,6 +6,7 @@ import java.util.function.IntFunction;
 
 import static java.lang.Math.*;
 import static jdk.incubator.vector.VectorOperators.*;
+import static org.rgbhsv.Transpose.*;
 
 public class RgbHsv {
 
@@ -400,10 +401,40 @@ public class RgbHsv {
             //              xS - Temporary.
             //              xV - Temporary.
             // todo: in the future it'd be nice to replace this with a generic (lane width independent) transpose.
-            xA = FloatVector.fromArray(species, src, offset, f1, 0);
-            xR = FloatVector.fromArray(species, src, offset, f2, 0);
-            xG = FloatVector.fromArray(species, src, offset, f3, 0);
-            xB = FloatVector.fromArray(species, src, offset, f4, 0);
+            if (speciesLength == 2) {
+                // todo
+                xA = FloatVector.fromArray(species, src, offset, f1, 0);
+                xR = FloatVector.fromArray(species, src, offset, f2, 0);
+                xG = FloatVector.fromArray(species, src, offset, f3, 0);
+                xB = FloatVector.fromArray(species, src, offset, f4, 0);
+            } else if (speciesLength == 4) {
+                var row1 = FloatVector.fromArray(species, src, offset);
+                var row2 = FloatVector.fromArray(species, src, offset + speciesLength);
+                var row3 = FloatVector.fromArray(species, src, offset + 2 * speciesLength);
+                var row4 = FloatVector.fromArray(species, src, offset + 3 * speciesLength);
+
+                var a0 = row1.rearrange(interleave32_lft, row2);
+                var a1 = row1.rearrange(interleave32_rgt, row2);
+                var a2 = row3.rearrange(interleave32_lft, row4);
+                var a3 = row3.rearrange(interleave32_rgt, row4);
+
+                xA = a0.rearrange(interleave64_lft, a2);
+                xR = a0.rearrange(interleave64_rgt, a2);
+                xG = a1.rearrange(interleave64_lft, a3);
+                xB = a1.rearrange(interleave64_rgt, a3);
+            } else if (speciesLength == 8) {
+                // todo
+                xA = FloatVector.fromArray(species, src, offset, f1, 0);
+                xR = FloatVector.fromArray(species, src, offset, f2, 0);
+                xG = FloatVector.fromArray(species, src, offset, f3, 0);
+                xB = FloatVector.fromArray(species, src, offset, f4, 0);
+            } else {
+                // todo
+                xA = FloatVector.fromArray(species, src, offset, f1, 0);
+                xR = FloatVector.fromArray(species, src, offset, f2, 0);
+                xG = FloatVector.fromArray(species, src, offset, f3, 0);
+                xB = FloatVector.fromArray(species, src, offset, f4, 0);
+            }
 
             // Calculate Value, Chroma, and Saturation.
             //
@@ -487,10 +518,39 @@ public class RgbHsv {
             xG = p0.blend(xG, xCm);
             xG = xG.sub(xH);
 
-            xA.intoArray(dst, offset, f1, 0);
-            xG.intoArray(dst, offset, f2, 0);
-            xS.intoArray(dst, offset, f3, 0);
-            xV.intoArray(dst, offset, f4, 0);
+            if (species.length() == 2) {
+                // todo
+                xA.intoArray(dst, offset, f1, 0);
+                xG.intoArray(dst, offset, f2, 0);
+                xS.intoArray(dst, offset, f3, 0);
+                xV.intoArray(dst, offset, f4, 0);
+            } else if (species.length() == 4) {
+                var a0 = xA.rearrange(interleave32_lft, xG);
+                var a1 = xA.rearrange(interleave32_rgt, xG);
+                var a2 = xS.rearrange(interleave32_lft, xV);
+                var a3 = xS.rearrange(interleave32_rgt, xV);
+
+                var row1 = a0.rearrange(interleave64_lft, a2);
+                var row2 = a0.rearrange(interleave64_rgt, a2);
+                var row3 = a1.rearrange(interleave64_lft, a3);
+                var row4 = a1.rearrange(interleave64_rgt, a3);
+
+                row1.intoArray(dst, offset);
+                row2.intoArray(dst, offset + speciesLength);
+                row3.intoArray(dst, offset + 2 * speciesLength);
+                row4.intoArray(dst, offset + 3 * speciesLength);
+            } else if (species.length() == 8) {
+                // todo
+                xA.intoArray(dst, offset, f1, 0);
+                xG.intoArray(dst, offset, f2, 0);
+                xS.intoArray(dst, offset, f3, 0);
+                xV.intoArray(dst, offset, f4, 0);
+            } else {
+                xA.intoArray(dst, offset, f1, 0);
+                xG.intoArray(dst, offset, f2, 0);
+                xS.intoArray(dst, offset, f3, 0);
+                xV.intoArray(dst, offset, f4, 0);
+            }
 
             offset += 4 * speciesLength;
         }
@@ -500,6 +560,7 @@ public class RgbHsv {
     // the goal is, if this is as fast as the other options, to use this instead of
     // transposed/swizzled data.
     // all of that will be hoisted out to it's own setup/teardown.
+    /*
     public static void ahsv_from_argb_sse2(
             IntFunction<FloatVector> f1, IntFunction<FloatVector> f2, IntFunction<FloatVector> f3, IntFunction<FloatVector> f4,
             //dst_a, float[] dst_h, float[] dst_s, float[] dst_v,
@@ -640,6 +701,8 @@ public class RgbHsv {
             offset += speciesLength;
         }
     }
+
+     */
 
     public static void ahsv_from_argb_sse2(
             float[] dst_a, float[] dst_h, float[] dst_s, float[] dst_v,
