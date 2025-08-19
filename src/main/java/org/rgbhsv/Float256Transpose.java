@@ -4,35 +4,30 @@ import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 
+/**
+ * Modified version of <a href="https://stackoverflow.com/questions/34122605/how-to-optimize-simd-transpose-function-8x4-4x8">...</a>
+ */
 public class Float256Transpose implements FloatTranspose {
-    private static final VectorSpecies<Float> SPECIES_128 = FloatVector.SPECIES_128; // A species for 4 floats
+    private static final VectorSpecies<Float> SPECIES_256 = FloatVector.SPECIES_256; // A species for 8 floats
 
-    public static final VectorShuffle<Float> interleave32_lft = VectorShuffle.fromValues(SPECIES_128, 0, 4, 1, 5);
-    public static final VectorShuffle<Float> interleave32_rgt = VectorShuffle.fromValues(SPECIES_128, 2, 6, 3, 7);
+    public static final VectorShuffle<Float> shuffle_256_1 = VectorShuffle.fromValues(SPECIES_256, 0, 4, 8 , 12, 1, 5, 9 , 13);
+    public static final VectorShuffle<Float> shuffle_256_2 = VectorShuffle.fromValues(SPECIES_256, 2, 6, 10, 14, 3, 7, 11, 15);
 
-    public static final VectorShuffle<Float> interleave64_lft = VectorShuffle.fromValues(SPECIES_128, 0, 1, 8, 9);
-    public static final VectorShuffle<Float> interleave64_rgt = VectorShuffle.fromValues(SPECIES_128, 2, 3, 10, 11);
+    public static final VectorShuffle<Float> shuffle_256_3 = VectorShuffle.fromValues(SPECIES_256, 0, 1, 2, 3, 8, 9, 10, 11);
+    public static final VectorShuffle<Float> shuffle_256_4 = VectorShuffle.fromValues(SPECIES_256, 4, 5, 6, 7, 12, 13, 14, 15);
 
-    // todo: write transpose function
-    // on arm, we use 128 bit wide float vectors
-    // that's 4 floats. so 4x4 matrix
     @Override
     public FloatTranspose.Result transpose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4) {
-        // Step 1: Interleave elements of row1 and row2
-        ////FloatVector col4 = FloatVector.recombine(SPECIES_128, temp2, temp4, 1, 1);
-        var a0 = row1.rearrange(interleave32_lft, row2);
-        var a1 = row1.rearrange(interleave32_rgt, row2);
-        var a2 = row3.rearrange(interleave32_lft, row4);
-        var a3 = row3.rearrange(interleave32_rgt, row4);
+        var a00 = row1.rearrange(shuffle_256_1, row2);
+        var a10 = row3.rearrange(shuffle_256_1, row4);
+        var a01 = row1.rearrange(shuffle_256_2, row2);
+        var a11 = row3.rearrange(shuffle_256_2, row4);
 
-        var X = a0.rearrange(interleave64_lft, a2);
-        var Y = a0.rearrange(interleave64_rgt, a2);
-        var Z = a1.rearrange(interleave64_lft, a3);
-        var W = a1.rearrange(interleave64_rgt, a3);
+        var X = a00.rearrange(shuffle_256_3, a10);
+        var Y = a00.rearrange(shuffle_256_4, a10);
+        var Z = a01.rearrange(shuffle_256_3, a11);
+        var W = a01.rearrange(shuffle_256_4, a11);
 
-        // Now col1, col2, col
-        return new FloatTranspose.Result(
-                X, Y, Z, W
-        );
+        return new FloatTranspose.Result(X, Y, Z, W);
     }
 }
