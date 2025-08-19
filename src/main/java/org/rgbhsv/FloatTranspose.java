@@ -7,4 +7,6 @@ public interface FloatTranspose {
     }
 
     Result transpose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4);
+
+    Result itranspose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4);
 }

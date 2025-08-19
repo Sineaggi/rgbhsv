@@ -30,4 +30,9 @@ public class Float256Transpose implements FloatTranspose {
 
         return new FloatTranspose.Result(X, Y, Z, W);
     }
+
+    @Override
+    public Result itranspose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

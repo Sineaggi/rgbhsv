@@ -39,6 +39,11 @@ public class Float128Transpose implements FloatTranspose {
         }
     }
 
+    @Override
+    public Result itranspose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4) {
+        return transpose(row1, row2, row3, row4);
+    }
+
     private FloatTranspose.Result interleave1(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4) {
         var a0 = row1.rearrange(interleave32_lft, row2);
         var a1 = row1.rearrange(interleave32_rgt, row2);

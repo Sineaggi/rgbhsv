@@ -19,6 +19,13 @@ public class Float128TransposeTests {
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{1, 5, 9, 13}, 0), out.col2());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{2, 6, 10, 14}, 0), out.col3());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{3, 7, 11, 15}, 0), out.col4());
+
+        var roundTrip = Float128Transpose.create().itranspose(out.col1(), out.col2(), out.col3(), out.col4());
+
+        assertEquals(p0, roundTrip.col1());
+        assertEquals(p1, roundTrip.col2());
+        assertEquals(p2, roundTrip.col3());
+        assertEquals(p3, roundTrip.col4());
     }
 
     @Test
@@ -34,5 +41,12 @@ public class Float128TransposeTests {
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{1, 5, 9, 13}, 0), out.col2());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{2, 6, 10, 14}, 0), out.col3());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_128, new float[]{3, 7, 11, 15}, 0), out.col4());
+
+        var roundTrip = Float128Transpose.create(-1).itranspose(out.col1(), out.col2(), out.col3(), out.col4());
+
+        assertEquals(p0, roundTrip.col1());
+        assertEquals(p1, roundTrip.col2());
+        assertEquals(p2, roundTrip.col3());
+        assertEquals(p3, roundTrip.col4());
     }
 }

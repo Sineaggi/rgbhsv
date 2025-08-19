@@ -4,6 +4,7 @@ import jdk.incubator.vector.FloatVector;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class Float256TransposeTests {
     @Test
@@ -19,5 +20,15 @@ public class Float256TransposeTests {
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_256, new float[]{1, 5, 9, 13, 17, 21, 25, 29}, 0), out.col2());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_256, new float[]{2, 6, 10, 14, 18, 22, 26, 30}, 0), out.col3());
         assertEquals(FloatVector.fromArray(FloatVector.SPECIES_256, new float[]{3, 7, 11, 15, 19, 23, 27, 31}, 0), out.col4());
+
+        assertThrows(UnsupportedOperationException.class, () -> {
+            var roundTrip = new Float256Transpose().itranspose(out.col1(), out.col2(), out.col3(), out.col4());
+
+            assertEquals(p0, roundTrip.col1());
+            assertEquals(p1, roundTrip.col2());
+            assertEquals(p2, roundTrip.col3());
+            assertEquals(p3, roundTrip.col4());
+        });
+
     }
 }
