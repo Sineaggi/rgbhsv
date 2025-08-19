@@ -425,11 +425,20 @@ public class RgbHsv {
                 xG = a1.rearrange(interleave64_lft, a3);
                 xB = a1.rearrange(interleave64_rgt, a3);
             } else if (speciesLength == 8) {
-                // todo
-                xA = FloatVector.fromArray(species, src, offset, f1, 0);
-                xR = FloatVector.fromArray(species, src, offset, f2, 0);
-                xG = FloatVector.fromArray(species, src, offset, f3, 0);
-                xB = FloatVector.fromArray(species, src, offset, f4, 0);
+                var row1 = FloatVector.fromArray(species, src, offset);
+                var row2 = FloatVector.fromArray(species, src, offset + speciesLength);
+                var row3 = FloatVector.fromArray(species, src, offset + 2 * speciesLength);
+                var row4 = FloatVector.fromArray(species, src, offset + 3 * speciesLength);
+
+                var a00 = row1.rearrange(Float256Transpose.shuffle_256_1, row2);
+                var a10 = row3.rearrange(Float256Transpose.shuffle_256_1, row4);
+                var a01 = row1.rearrange(Float256Transpose.shuffle_256_2, row2);
+                var a11 = row3.rearrange(Float256Transpose.shuffle_256_2, row4);
+
+                xA = a00.rearrange(Float256Transpose.shuffle_256_3, a10);
+                xR = a00.rearrange(Float256Transpose.shuffle_256_4, a10);
+                xG = a01.rearrange(Float256Transpose.shuffle_256_3, a11);
+                xB = a01.rearrange(Float256Transpose.shuffle_256_4, a11);
             } else {
                 // todo
                 xA = FloatVector.fromArray(species, src, offset, f1, 0);
