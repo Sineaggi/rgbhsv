@@ -2,11 +2,9 @@ package org.rgbhsv;
 
 import jdk.incubator.vector.*;
 
-import java.util.function.IntFunction;
-
 import static java.lang.Math.*;
 import static jdk.incubator.vector.VectorOperators.*;
-import static org.rgbhsv.Transpose.*;
+import static org.rgbhsv.Float128Transpose.*;
 
 public class RgbHsv {
 
@@ -217,7 +215,7 @@ public class RgbHsv {
         }
     }
 
-    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_PREFERRED;
+    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_64;
 
     static void argb_from_ahsv_sse2(float[] dst, float[] src, int length, VectorSpecies<Float> species) {
         var p0 = FloatVectorSupport.fromSingle(species, 0f);
@@ -402,11 +400,15 @@ public class RgbHsv {
             //              xV - Temporary.
             // todo: in the future it'd be nice to replace this with a generic (lane width independent) transpose.
             if (speciesLength == 2) {
-                // todo
-                xA = FloatVector.fromArray(species, src, offset, f1, 0);
-                xR = FloatVector.fromArray(species, src, offset, f2, 0);
-                xG = FloatVector.fromArray(species, src, offset, f3, 0);
-                xB = FloatVector.fromArray(species, src, offset, f4, 0);
+                var row1 = FloatVector.fromArray(species, src, offset);
+                var row2 = FloatVector.fromArray(species, src, offset + speciesLength);
+                var row3 = FloatVector.fromArray(species, src, offset + 2 * speciesLength);
+                var row4 = FloatVector.fromArray(species, src, offset + 3 * speciesLength);
+
+                xA = row1.rearrange(Float64Transpose.t1, row3);
+                xR = row1.rearrange(Float64Transpose.t2, row3);
+                xG = row2.rearrange(Float64Transpose.t3, row4);
+                xB = row2.rearrange(Float64Transpose.t4, row4);
             } else if (speciesLength == 4) {
                 var row1 = FloatVector.fromArray(species, src, offset);
                 var row2 = FloatVector.fromArray(species, src, offset + speciesLength);

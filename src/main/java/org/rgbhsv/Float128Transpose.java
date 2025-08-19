@@ -4,7 +4,7 @@ import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 
-public class Transpose {
+public class Float128Transpose {
     private static final VectorSpecies<Float> SPECIES_128 = FloatVector.SPECIES_128; // A species for 4 floats
 
     public static final VectorShuffle<Float> interleave32_lft = VectorShuffle.fromValues(SPECIES_128, 0, 4, 1, 5);
