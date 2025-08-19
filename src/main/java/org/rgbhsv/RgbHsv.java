@@ -215,7 +215,7 @@ public class RgbHsv {
         }
     }
 
-    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_64;
+    static final VectorSpecies<Float> SPECIES = FloatVector.SPECIES_PREFERRED;
 
     static void argb_from_ahsv_sse2(float[] dst, float[] src, int length, VectorSpecies<Float> species) {
         var p0 = FloatVectorSupport.fromSingle(species, 0f);
@@ -407,8 +407,8 @@ public class RgbHsv {
 
                 xA = row1.rearrange(Float64Transpose.t1, row3);
                 xR = row1.rearrange(Float64Transpose.t2, row3);
-                xG = row2.rearrange(Float64Transpose.t3, row4);
-                xB = row2.rearrange(Float64Transpose.t4, row4);
+                xG = row2.rearrange(Float64Transpose.t1, row4);
+                xB = row2.rearrange(Float64Transpose.t2, row4);
             } else if (speciesLength == 4) {
                 var row1 = FloatVector.fromArray(species, src, offset);
                 var row2 = FloatVector.fromArray(species, src, offset + speciesLength);

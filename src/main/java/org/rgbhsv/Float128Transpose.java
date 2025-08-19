@@ -4,7 +4,7 @@ import jdk.incubator.vector.FloatVector;
 import jdk.incubator.vector.VectorShuffle;
 import jdk.incubator.vector.VectorSpecies;
 
-public class Float128Transpose {
+public class Float128Transpose implements FloatTranspose {
     private static final VectorSpecies<Float> SPECIES_128 = FloatVector.SPECIES_128; // A species for 4 floats
 
     public static final VectorShuffle<Float> interleave32_lft = VectorShuffle.fromValues(SPECIES_128, 0, 4, 1, 5);
@@ -13,12 +13,10 @@ public class Float128Transpose {
     public static final VectorShuffle<Float> interleave64_lft = VectorShuffle.fromValues(SPECIES_128, 0, 1, 8, 9);
     public static final VectorShuffle<Float> interleave64_rgt = VectorShuffle.fromValues(SPECIES_128, 2, 3, 10, 11);
 
-    record Result(FloatVector col1, FloatVector col2, FloatVector col3, FloatVector col4) {
-    }
-
     // todo: write transpose function
     // on arm, we use 128 bit wide float vectors
     // that's 4 floats. so 4x4 matrix
+    @Override
     public Result transpose(FloatVector row1, FloatVector row2, FloatVector row3, FloatVector row4) {
         // Step 1: Interleave elements of row1 and row2
         ////FloatVector col4 = FloatVector.recombine(SPECIES_128, temp2, temp4, 1, 1);
